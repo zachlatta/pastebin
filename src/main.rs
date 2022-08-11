@@ -1,9 +1,16 @@
 #[macro_use]
 extern crate rocket;
 
+mod paste_id;
+
+use paste_id::PasteId;
+
+use rocket::tokio::fs::File;
+use std::path::Path;
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index])
+    rocket::build().mount("/", routes![index, retrieve])
 }
 
 #[get("/")]
@@ -20,4 +27,9 @@ fn index() -> &'static str {
         
             retrieves the content for the paste with id `<id>`
     "
+}
+
+#[get("/<id>")]
+async fn retrieve(id: PasteId<'_>) -> Option<File> {
+    File::open(id.file_path()).await.ok()
 }

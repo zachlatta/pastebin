@@ -706,6 +706,7 @@ dependencies = [
 name = "pastebin"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "rocket",
 ]
 
