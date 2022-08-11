@@ -3,14 +3,29 @@ extern crate rocket;
 
 mod paste_id;
 
+use rocket::data::{Data, ToByteUnit};
+use rocket::http::uri::Absolute;
+use rocket::response::content::RawText;
+use rocket::tokio::fs::{self, File};
+
 use paste_id::PasteId;
 
-use rocket::tokio::fs::File;
-use std::path::Path;
+const HOST: Absolute<'static> = uri!("http://localhost:8000");
+const ID_LENGTH: usize = 3;
 
-#[launch]
-fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, retrieve])
+#[post("/", data = "<paste>")]
+async fn upload(paste: Data<'_>) -> std::io::Result<String> {
+    let id = PasteId::new(ID_LENGTH);
+    paste
+        .open(128.kibibytes())
+        .into_file(id.file_path())
+        .await?;
+    Ok(uri!(HOST, retrieve(id)).to_string())
+}
+
+#[get("/<id>")]
+async fn retrieve(id: PasteId<'_>) -> Option<File> {
+    File::open(id.file_path()).await.ok()
 }
 
 #[get("/")]
@@ -29,7 +44,7 @@ fn index() -> &'static str {
     "
 }
 
-#[get("/<id>")]
-async fn retrieve(id: PasteId<'_>) -> Option<File> {
-    File::open(id.file_path()).await.ok()
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![index, retrieve, upload])
 }
